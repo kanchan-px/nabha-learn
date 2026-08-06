@@ -1,0 +1,35 @@
+{
+  "name": "nabha-learn",
+  "version": "1.0.0",
+  "description": "Offline-first digital learning platform for rural government schools, built for low-connectivity, low-end Android environments.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kanchan-px/nabha-learn.git"
+  },
+  "lint-staged": {
+  "backend/src/**/*.ts": [
+    "npm --prefix backend run lint",
+    "npm --prefix backend run format"
+  ]
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kanchan-px/nabha-learn/issues"
+  },
+  "homepage": "https://github.com/kanchan-px/nabha-learn#readme",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0"
+  }
+}
