@@ -39,9 +39,62 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+
   school   School? @relation(fields: [schoolId], references: [id])
   schoolId String?
+  courses Course[]
 
   @@index([schoolId, role])
   @@map("users")
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  gradeLevel  String?
+  language    String   @default("en")
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy   User    @relation(fields: [createdById], references: [id])
+  createdById String
+
+  modules Module[]
+
+  @@map("courses")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId String
+
+  lessons Lesson[]
+
+  @@index([courseId, order])
+  @@map("modules")
+}
+
+model Lesson {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int
+  bodyText  String?
+  videoUrl  String?
+  pdfUrl    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId String
+
+  @@index([moduleId, order])
+  @@map("lessons")
 }
