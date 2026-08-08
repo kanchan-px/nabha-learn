@@ -44,6 +44,8 @@ model User {
   schoolId String?
   courses Course[]
 
+  quizAttempts QuizAttempt[]
+
   @@index([schoolId, role])
   @@map("users")
 }
@@ -95,6 +97,64 @@ model Lesson {
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   moduleId String
 
+  quiz Quiz?
+
   @@index([moduleId, order])
   @@map("lessons")
+}
+
+model Quiz {
+  id        String   @id @default(uuid())
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId String @unique
+
+  questions Question[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model Question {
+  id        String @id @default(uuid())
+  text      String
+  order     Int
+
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId String
+
+  options Option[]
+
+  @@index([quizId, order])
+  @@map("questions")
+}
+
+model Option {
+  id        String  @id @default(uuid())
+  text      String
+  isCorrect Boolean @default(false)
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+
+  @@map("options")
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid())
+  score       Int
+  totalMarks  Int
+  submittedAt DateTime @default(now())
+
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId String
+
+  student   User   @relation(fields: [studentId], references: [id])
+  studentId String
+
+  @@index([studentId, quizId])
+  @@map("quiz_attempts")
 }
