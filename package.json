@@ -18,6 +18,10 @@
   "backend/src/**/*.ts": [
     "npm --prefix backend run lint",
     "npm --prefix backend run format"
+  ],
+  "web/src/**/*.{ts,tsx}": [
+    "npm --prefix web run lint",
+    "npm --prefix web run format"
   ]
 },
   "keywords": [],
