@@ -45,6 +45,7 @@ model User {
   courses Course[]
 
   quizAttempts QuizAttempt[]
+  progressEvents ProgressEvent[]
 
   @@index([schoolId, role])
   @@map("users")
@@ -98,6 +99,7 @@ model Lesson {
   moduleId String
 
   quiz Quiz?
+  progressEvents ProgressEvent[]
 
   @@index([moduleId, order])
   @@map("lessons")
@@ -157,4 +159,24 @@ model QuizAttempt {
 
   @@index([studentId, quizId])
   @@map("quiz_attempts")
+}
+
+enum ProgressEventType {
+  LESSON_OPENED
+  LESSON_COMPLETED
+}
+
+model ProgressEvent {
+  id        String            @id @default(uuid())
+  eventType ProgressEventType
+  createdAt DateTime          @default(now())
+
+  student   User   @relation(fields: [studentId], references: [id])
+  studentId String
+
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId String
+
+  @@index([studentId, lessonId, createdAt])
+  @@map("progress_events")
 }
