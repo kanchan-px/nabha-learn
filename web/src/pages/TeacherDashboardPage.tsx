@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getCourses } from "../api/courses.api";
 import type { Course } from "../api/courses.api";
 import { useAuth } from "../context/useAuth";
+import { Link } from "react-router-dom";
 
 function TeacherDashboardPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -34,6 +35,7 @@ function TeacherDashboardPage() {
       </header>
 
       <h2>Your Courses</h2>
+      <Link to="/courses/new">+ Create New Course</Link>
 
       {isLoading && <p>Loading courses...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
@@ -43,7 +45,8 @@ function TeacherDashboardPage() {
       <ul>
         {courses.map((course) => (
           <li key={course.id}>
-            <strong>{course.title}</strong> — {course.isPublished ? "Published" : "Draft"}
+            <Link to={`/courses/${course.id}`}>{course.title}</Link> —{" "}
+            {course.isPublished ? "Published" : "Draft"}
           </li>
         ))}
       </ul>
