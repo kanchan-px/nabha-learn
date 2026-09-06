@@ -4,6 +4,7 @@ import TeacherDashboardPage from "./pages/TeacherDashboardPage";
 import CreateCoursePage from "./pages/CreateCoursePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CourseDetailPage from "./pages/CourseDetailPage";
+import CourseProgressPage from "./pages/CourseProgressPage";
 
 function App() {
   return (
@@ -32,6 +33,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={["TEACHER", "ADMIN"]}>
             <CourseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/courses/:courseId/progress"
+        element={
+          <ProtectedRoute allowedRoles={["TEACHER", "ADMIN"]}>
+            <CourseProgressPage />
           </ProtectedRoute>
         }
       />
