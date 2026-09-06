@@ -6,6 +6,7 @@ import LoginScreen from "../screens/LoginScreen";
 import DashboardScreen from "../screens/DashboardScreen";
 import CourseDetailScreen from "../screens/CourseDetailScreen";
 import LessonViewerScreen from "../screens/LessonViewerScreen";
+import QuizScreen from "../screens/QuizScreen";
 
 export type LessonParam = {
   id: string;
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   Dashboard: undefined;
   CourseDetail: { courseId: string; courseTitle: string };
   LessonViewer: { lesson: LessonParam };
+  QuizScreen: { lessonId: string; lessonTitle: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -54,6 +56,11 @@ export default function AppNavigator() {
               name="LessonViewer"
               component={LessonViewerScreen}
               options={({ route }) => ({ title: route.params.lesson.title })}
+            />
+            <Stack.Screen
+              name="QuizScreen"
+              component={QuizScreen}
+              options={({ route }) => ({ title: `Quiz: ${route.params.lessonTitle}` })}
             />
           </>
         ) : (

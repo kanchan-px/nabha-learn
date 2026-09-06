@@ -17,7 +17,12 @@ import { logProgress } from "../api/progress.api";
 
 import { getLessonStatus } from "../api/progress.api";
 
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { getQuizForLesson } from "../api/quiz.api";
+
 type LessonViewerRouteProp = RouteProp<RootStackParamList, "LessonViewer">;
+type LessonViewerNavigationProp = NativeStackNavigationProp<RootStackParamList, "LessonViewer">;
 
 export default function LessonViewerScreen() {
   const route = useRoute<LessonViewerRouteProp>();
@@ -26,31 +31,49 @@ export default function LessonViewerScreen() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
 
+  const [hasQuiz, setHasQuiz] = useState(false);
+  const navigation = useNavigation<LessonViewerNavigationProp>();
+
   const player = useVideoPlayer(lesson.videoUrl ?? "", (playerInstance) => {
     playerInstance.loop = false;
   });
 
   useEffect(() => {
-  let ignore = false;
+    let ignore = false;
 
-  async function checkStatus() {
-    try {
-      const status = await getLessonStatus(lesson.id);
-      if (!ignore && status === "LESSON_COMPLETED") {
-        setIsCompleted(true);
+    async function checkStatus() {
+      try {
+        const status = await getLessonStatus(lesson.id);
+        if (!ignore && status === "LESSON_COMPLETED") {
+          setIsCompleted(true);
+        }
+      } catch {
+        // ignore — non-critical
       }
-    } catch {
-      // ignore — non-critical
     }
-  }
 
-  checkStatus();
-  logProgress(lesson.id, "LESSON_OPENED").catch(() => {});
+    checkStatus();
+    logProgress(lesson.id, "LESSON_OPENED").catch(() => {});
 
-  return () => {
-    ignore = true;
-  };
-}, [lesson.id]);
+    return () => {
+      ignore = true;
+    };
+  }, [lesson.id]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function checkQuiz() {
+      const quiz = await getQuizForLesson(lesson.id);
+      if (!ignore) setHasQuiz(!!quiz);
+    }
+
+    checkQuiz();
+
+    return () => {
+      ignore = true;
+    };
+  }, [lesson.id]);
 
   async function handleMarkComplete() {
     setIsCompleting(true);
@@ -96,6 +119,19 @@ export default function LessonViewerScreen() {
             </Text>
           )}
         </TouchableOpacity>
+        {hasQuiz && (
+          <TouchableOpacity
+            style={styles.quizButton}
+            onPress={() =>
+              navigation.navigate("QuizScreen", {
+                lessonId: lesson.id,
+                lessonTitle: lesson.title,
+              })
+            }
+          >
+            <Text style={styles.quizButtonText}>Take Quiz</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -148,6 +184,20 @@ const styles = StyleSheet.create({
   },
   completeButtonText: {
     color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  quizButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#0F766E",
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  quizButtonText: {
+    color: "#0F766E",
     fontSize: 16,
     fontWeight: "600",
   },
