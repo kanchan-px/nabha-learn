@@ -4,10 +4,12 @@ import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "../context/useAuth";
 import LoginScreen from "../screens/LoginScreen";
 import DashboardScreen from "../screens/DashboardScreen";
+import CourseDetailScreen from "../screens/CourseDetailScreen";
 
 export type RootStackParamList = {
   Login: undefined;
   Dashboard: undefined;
+  CourseDetail: { courseId: string; courseTitle: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -27,7 +29,18 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator>
         {user ? (
-          <Stack.Screen name="Dashboard" component={DashboardScreen} />
+          <>
+            <Stack.Screen
+              name="Dashboard"
+              component={DashboardScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="CourseDetail"
+              component={CourseDetailScreen}
+              options={({ route }) => ({ title: route.params.courseTitle })}
+            />
+          </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         )}
