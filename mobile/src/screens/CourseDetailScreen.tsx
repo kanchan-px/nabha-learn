@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { RouteProp } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
@@ -7,10 +14,15 @@ import type { RootStackParamList } from "../navigation/AppNavigator";
 import { getCourseById } from "../api/courses.api";
 import type { Course } from "../api/courses.api";
 
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 type CourseDetailRouteProp = RouteProp<RootStackParamList, "CourseDetail">;
+type CourseDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, "CourseDetail">;
 
 export default function CourseDetailScreen() {
   const route = useRoute<CourseDetailRouteProp>();
+  const navigation = useNavigation<CourseDetailNavigationProp>();
   const { courseId } = route.params;
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -60,9 +72,7 @@ export default function CourseDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-      {course.description ? (
-        <Text style={styles.description}>{course.description}</Text>
-      ) : null}
+      {course.description ? <Text style={styles.description}>{course.description}</Text> : null}
 
       <FlatList
         data={course.modules ?? []}
@@ -72,7 +82,22 @@ export default function CourseDetailScreen() {
           <View style={styles.moduleBlock}>
             <Text style={styles.moduleTitle}>{module.title}</Text>
             {module.lessons.map((lesson) => (
-              <TouchableOpacity key={lesson.id} style={styles.lessonRow} activeOpacity={0.7}>
+              <TouchableOpacity
+                key={lesson.id}
+                style={styles.lessonRow}
+                activeOpacity={0.7}
+                onPress={() =>
+                  navigation.navigate("LessonViewer", {
+                    lesson: {
+                      id: lesson.id,
+                      title: lesson.title,
+                      bodyText: lesson.bodyText,
+                      videoUrl: lesson.videoUrl,
+                      pdfUrl: lesson.pdfUrl,
+                    },
+                  })
+                }
+              >
                 <View style={styles.lessonBullet} />
                 <Text style={styles.lessonTitle}>{lesson.title}</Text>
               </TouchableOpacity>

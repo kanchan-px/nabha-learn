@@ -5,11 +5,21 @@ import { useAuth } from "../context/useAuth";
 import LoginScreen from "../screens/LoginScreen";
 import DashboardScreen from "../screens/DashboardScreen";
 import CourseDetailScreen from "../screens/CourseDetailScreen";
+import LessonViewerScreen from "../screens/LessonViewerScreen";
+
+export type LessonParam = {
+  id: string;
+  title: string;
+  bodyText: string | null;
+  videoUrl: string | null;
+  pdfUrl: string | null;
+};
 
 export type RootStackParamList = {
   Login: undefined;
   Dashboard: undefined;
   CourseDetail: { courseId: string; courseTitle: string };
+  LessonViewer: { lesson: LessonParam };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -39,6 +49,11 @@ export default function AppNavigator() {
               name="CourseDetail"
               component={CourseDetailScreen}
               options={({ route }) => ({ title: route.params.courseTitle })}
+            />
+            <Stack.Screen
+              name="LessonViewer"
+              component={LessonViewerScreen}
+              options={({ route }) => ({ title: route.params.lesson.title })}
             />
           </>
         ) : (

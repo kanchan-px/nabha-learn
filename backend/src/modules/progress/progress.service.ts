@@ -74,3 +74,12 @@ export async function getCourseProgress(courseId: string) {
     progressGrid,
   };
 }
+
+export async function getLessonStatus(lessonId: string, studentId: string) {
+  const latestEvent = await prisma.progressEvent.findFirst({
+    where: { lessonId, studentId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return { status: latestEvent ? latestEvent.eventType : "NOT_STARTED" };
+}

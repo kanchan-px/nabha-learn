@@ -23,22 +23,26 @@ export default function LoginScreen() {
   const { login } = useAuth();
 
   async function handleLogin() {
-    if (!username.trim() || !password) {
-      setError("Please enter both username and password");
-      return;
-    }
-
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      await login({ username: username.trim(), password });
-    } catch(err) {
-      setError("Invalid username or password");
-    } finally {
-      setIsSubmitting(false);
-    }
+  if (!username.trim() || !password) {
+    setError("Please enter both username and password");
+    return;
   }
+
+  setError("");
+  setIsSubmitting(true);
+
+  try {
+    await login({ username: username.trim(), password });
+  } catch (err) {
+    if (err instanceof Error && err.message === "WRONG_APP_FOR_ROLE") {
+      setError("This app is for students. Teachers and admins should use the web dashboard.");
+    } else {
+      setError("Invalid username or password");
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+}
 
   return (
     <SafeAreaView style={styles.safeArea}>

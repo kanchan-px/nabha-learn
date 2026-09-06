@@ -22,11 +22,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(payload: LoginPayload) {
-    const { user, token } = await loginRequest(payload);
-    await AsyncStorage.setItem("token", token);
-    await AsyncStorage.setItem("user", JSON.stringify(user));
-    setUser(user);
+  const { user, token } = await loginRequest(payload);
+
+  if (user.role !== "STUDENT") {
+    throw new Error("WRONG_APP_FOR_ROLE");
   }
+
+  await AsyncStorage.setItem("token", token);
+  await AsyncStorage.setItem("user", JSON.stringify(user));
+  setUser(user);
+}
 
   async function logout() {
     await AsyncStorage.removeItem("token");

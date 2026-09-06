@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../../middleware/authenticate";
 import { logProgressSchema } from "./progress.validation";
-import { logProgress, getCourseProgress } from "./progress.service";
+import { logProgress, getCourseProgress, getLessonStatus } from "./progress.service";
 
 export async function create(req: AuthenticatedRequest, res: Response) {
   const lessonId = req.params.lessonId as string;
@@ -30,4 +30,11 @@ export async function getForCourse(req: AuthenticatedRequest, res: Response) {
     const message = err instanceof Error ? err.message : "Something went wrong";
     return res.status(404).json({ error: message });
   }
+}
+
+export async function getStatus(req: AuthenticatedRequest, res: Response) {
+  const lessonId = req.params.lessonId as string;
+
+  const status = await getLessonStatus(lessonId, req.user!.userId);
+  return res.status(200).json(status);
 }
