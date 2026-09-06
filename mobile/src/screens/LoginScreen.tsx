@@ -34,7 +34,6 @@ export default function LoginScreen() {
     try {
       await login({ username: username.trim(), password });
     } catch(err) {
-      console.error("Login failed",err);
       setError("Invalid username or password");
     } finally {
       setIsSubmitting(false);

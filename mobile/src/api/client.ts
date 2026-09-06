@@ -5,7 +5,6 @@ const apiClient = create({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
 });
 
-console.log("API BASE URL:", process.env.EXPO_PUBLIC_API_URL);
 
 apiClient.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("token");
