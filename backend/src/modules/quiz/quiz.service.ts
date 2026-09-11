@@ -98,3 +98,17 @@ export async function submitAttempt(lessonId: string, studentId: string, data: S
     },
   });
 }
+
+export async function getQuizForDownload(lessonId: string) {
+  const quiz = await prisma.quiz.findUnique({
+    where: { lessonId },
+    include: {
+      questions: {
+        orderBy: { order: "asc" },
+        include: { options: true },
+      },
+    },
+  });
+
+  return quiz;
+}
