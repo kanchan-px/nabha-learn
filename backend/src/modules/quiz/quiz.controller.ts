@@ -50,12 +50,6 @@ export async function submit(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-export async function getForDownload(req: AuthenticatedRequest, res: Response) {
-  const lessonId = req.params.lessonId as string;
-  const quiz = await getQuizForDownload(lessonId);
-  return res.status(200).json({ quiz });
-}
-
 export async function submitOfflineResult(req: AuthenticatedRequest, res: Response) {
   const lessonId = req.params.lessonId as string;
   const { score, totalMarks } = req.body;
@@ -66,5 +60,17 @@ export async function submitOfflineResult(req: AuthenticatedRequest, res: Respon
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong";
     return res.status(400).json({ error: message });
+  }
+}
+
+export async function getForDownload(req: AuthenticatedRequest, res: Response) {
+  const lessonId = req.params.lessonId as string;
+
+  try {
+    const quiz = await getQuizForDownload(lessonId, req.user!.userId, req.user!.role);
+    return res.status(200).json({ quiz });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Something went wrong";
+    return res.status(403).json({ error: message });
   }
 }

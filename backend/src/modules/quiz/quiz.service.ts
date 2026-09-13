@@ -99,20 +99,6 @@ export async function submitAttempt(lessonId: string, studentId: string, data: S
   });
 }
 
-export async function getQuizForDownload(lessonId: string) {
-  const quiz = await prisma.quiz.findUnique({
-    where: { lessonId },
-    include: {
-      questions: {
-        orderBy: { order: "asc" },
-        include: { options: true },
-      },
-    },
-  });
-
-  return quiz;
-}
-
 export async function recordOfflineAttempt(
   lessonId: string,
   studentId: string,
@@ -127,4 +113,50 @@ export async function recordOfflineAttempt(
   return prisma.quizAttempt.create({
     data: { quizId: quiz.id, studentId, score, totalMarks },
   });
+}
+
+export async function getQuizForDownload(lessonId: string, userId: string, userRole: string) {
+  if (userRole === "STUDENT") {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        module: {
+          include: { course: { include: { createdBy: { select: { schoolId: true } } } } },
+        },
+      },
+    });
+
+    if (!lesson) {
+      throw new Error("Not authorized to access this content");
+    }
+
+    const student = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { schoolId: true },
+    });
+
+    const courseSchoolId = lesson.module.course.createdBy.schoolId;
+    const isPublished = lesson.module.course.isPublished;
+
+    if (
+      !student?.schoolId ||
+      !courseSchoolId ||
+      student.schoolId !== courseSchoolId ||
+      !isPublished
+    ) {
+      throw new Error("Not authorized to access this content");
+    }
+  }
+
+  const quiz = await prisma.quiz.findUnique({
+    where: { lessonId },
+    include: {
+      questions: {
+        orderBy: { order: "asc" },
+        include: { options: true },
+      },
+    },
+  });
+
+  return quiz;
 }
