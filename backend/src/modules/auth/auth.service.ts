@@ -22,7 +22,7 @@ export async function registerUser(data: RegisterInput) {
       username: data.username,
       email: data.email,
       passwordHash,
-      role: data.role,
+      role: "STUDENT",
       schoolId: data.schoolId,
     },
   });
