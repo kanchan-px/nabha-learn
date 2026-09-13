@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import CourseProgressPage from "./pages/CourseProgressPage";
 import AdminSchoolsPage from "./pages/AdminSchoolsPage";
+import AdminTeachersPage from "./pages/AdminTeachersPage";
 
 function App() {
   return (
@@ -50,6 +51,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={["ADMIN"]}>
             <AdminSchoolsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/teachers"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AdminTeachersPage />
           </ProtectedRoute>
         }
       />

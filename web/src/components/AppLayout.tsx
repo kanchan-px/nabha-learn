@@ -53,12 +53,21 @@ function AppLayout({ children }: { children: ReactNode }) {
           {/* User section */}
           <div className="flex items-center gap-4">
             {user?.role === "ADMIN" && (
-              <Link
-                to="/admin/schools"
-                className="hidden sm:inline text-sm font-medium text-slate-600 hover:text-teal-700"
-              >
-                Schools
-              </Link>
+              <>
+                <Link
+                  to="/admin/schools"
+                  className="hidden sm:inline text-sm font-medium text-slate-600 hover:text-teal-700"
+                >
+                  Schools
+                </Link>
+
+                <Link
+                  to="/admin/teachers"
+                  className="hidden sm:inline text-sm font-medium text-slate-600 hover:text-teal-700"
+                >
+                  Teachers
+                </Link>
+              </>
             )}
 
             <span className="hidden sm:inline text-sm text-slate-600">

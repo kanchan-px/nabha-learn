@@ -19,7 +19,7 @@ export async function create(req: AuthenticatedRequest, res: Response) {
 }
 
 export async function list(req: AuthenticatedRequest, res: Response) {
-  const courses = await listCourses(req.user!.role);
+  const courses = await listCourses(req.user!.userId, req.user!.role);
   return res.status(200).json({ courses });
 }
 
@@ -27,7 +27,7 @@ export async function getOne(req: AuthenticatedRequest, res: Response) {
   const courseId = req.params.courseId as string;
 
   try {
-    const course = await getCourseById(courseId, req.user!.role);
+    const course = await getCourseById(courseId, req.user!.userId, req.user!.role);
     return res.status(200).json({ course });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong";
@@ -44,10 +44,10 @@ export async function update(req: AuthenticatedRequest, res: Response) {
   }
 
   try {
-    const course = await updateCourse(courseId, parseResult.data);
+    const course = await updateCourse(courseId, parseResult.data, req.user!.userId, req.user!.role);
     return res.status(200).json({ course });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong";
-    return res.status(404).json({ error: message });
+    return res.status(403).json({ error: message });
   }
 }
