@@ -3,6 +3,7 @@ import apiClient from "./client";
 export interface QuizOption {
   id: string;
   text: string;
+  isCorrect?: boolean;
 }
 
 export interface QuizQuestion {
@@ -22,9 +23,21 @@ export interface QuizAttemptResult {
   totalMarks: number;
 }
 
-export async function getQuizForLesson(lessonId: string): Promise<Quiz | null> {
+export async function getQuizForLesson(lessonId: string): Promise<Quiz> {
+  const response = await apiClient.get<{ quiz: Quiz }>(
+    `/lessons/${lessonId}/quiz`
+  );
+
+  return response.data.quiz;
+}
+
+export async function getQuizForDownload(
+  lessonId: string
+): Promise<Quiz | null> {
   try {
-    const response = await apiClient.get<{ quiz: Quiz }>(`/lessons/${lessonId}/quiz`);
+    const response = await apiClient.get<{ quiz: Quiz }>(
+      `/lessons/${lessonId}/quiz/download`
+    );
     return response.data.quiz;
   } catch {
     return null;
@@ -41,3 +54,6 @@ export async function submitQuizAttempt(
   );
   return response.data.attempt;
 }
+
+
+

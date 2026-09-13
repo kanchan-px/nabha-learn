@@ -1,6 +1,6 @@
 import { getDb } from "./schema";
 import { getCourseById } from "../api/courses.api";
-import { getQuizForLesson } from "../api/quiz.api";
+import { getQuizForDownload } from "../api/quiz.api";
 
 export async function downloadCourse(courseId: string): Promise<void> {
   const course = await getCourseById(courseId);
@@ -8,26 +8,43 @@ export async function downloadCourse(courseId: string): Promise<void> {
 
   await db.withTransactionAsync(async () => {
     await db.runAsync(
-      `INSERT OR REPLACE INTO downloaded_courses (id, title, description, downloaded_at)
+      `INSERT OR REPLACE INTO downloaded_courses (id, title, description, downloaded_at) 
        VALUES (?, ?, ?, ?)`,
-      [course.id, course.title, course.description ?? "", new Date().toISOString()]
+      [
+        course.id,
+        course.title,
+        course.description ?? "",
+        new Date().toISOString(),
+      ]
     );
 
     for (const courseModule of course.modules ?? []) {
       await db.runAsync(
-        `INSERT OR REPLACE INTO downloaded_modules (id, course_id, title, order_index)
+        `INSERT OR REPLACE INTO downloaded_modules (id, course_id, title, order_index) 
          VALUES (?, ?, ?, ?)`,
-        [courseModule.id, course.id, courseModule.title, courseModule.order]
+        [
+          courseModule.id,
+          course.id,
+          courseModule.title,
+          courseModule.order,
+        ]
       );
 
       for (const lesson of courseModule.lessons) {
         await db.runAsync(
-          `INSERT OR REPLACE INTO downloaded_lessons (id, module_id, title, order_index, body_text)
+          `INSERT OR REPLACE INTO downloaded_lessons (id, module_id, title, order_index, body_text) 
            VALUES (?, ?, ?, ?, ?)`,
-          [lesson.id, courseModule.id, lesson.title, lesson.order, lesson.bodyText ?? ""]
+          [
+            lesson.id,
+            courseModule.id,
+            lesson.title,
+            lesson.order,
+            lesson.bodyText ?? "",
+          ]
         );
 
-        const quiz = await getQuizForLesson(lesson.id);
+        const quiz = await getQuizForDownload(lesson.id);
+
         if (quiz) {
           await db.runAsync(
             `INSERT OR REPLACE INTO downloaded_quizzes (id, lesson_id, title) VALUES (?, ?, ?)`,
@@ -41,9 +58,10 @@ export async function downloadCourse(courseId: string): Promise<void> {
             );
 
             for (const option of question.options) {
-              const isCorrect = "isCorrect" in option ? (option.isCorrect ? 1 : 0) : 0;
+              const isCorrect = option.isCorrect ? 1 : 0;
+
               await db.runAsync(
-                `INSERT OR REPLACE INTO downloaded_options (id, question_id, text, is_correct)
+                `INSERT OR REPLACE INTO downloaded_options (id, question_id, text, is_correct) 
                  VALUES (?, ?, ?, ?)`,
                 [option.id, question.id, option.text, isCorrect]
               );
@@ -55,11 +73,16 @@ export async function downloadCourse(courseId: string): Promise<void> {
   });
 }
 
-export async function isCourseDownloaded(courseId: string): Promise<boolean> {
+export async function isCourseDownloaded(
+  courseId: string
+): Promise<boolean> {
   const db = await getDb();
+
   const result = await db.getFirstAsync<{ id: string }>(
     `SELECT id FROM downloaded_courses WHERE id = ?`,
     [courseId]
   );
+
   return !!result;
 }
+

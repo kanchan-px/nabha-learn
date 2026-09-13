@@ -20,6 +20,8 @@ import { getLessonStatus } from "../api/progress.api";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { getQuizForLesson } from "../api/quiz.api";
+import { useIsOnline } from "../hooks/useIsOnline";
+import { getOfflineQuizForLesson } from "../db/offlineCourses";
 
 type LessonViewerRouteProp = RouteProp<RootStackParamList, "LessonViewer">;
 type LessonViewerNavigationProp = NativeStackNavigationProp<RootStackParamList, "LessonViewer">;
@@ -33,6 +35,7 @@ export default function LessonViewerScreen() {
 
   const [hasQuiz, setHasQuiz] = useState(false);
   const navigation = useNavigation<LessonViewerNavigationProp>();
+  const { isOnline, isReady } = useIsOnline();
 
   const player = useVideoPlayer(lesson.videoUrl ?? "", (playerInstance) => {
     playerInstance.loop = false;
@@ -61,19 +64,28 @@ export default function LessonViewerScreen() {
   }, [lesson.id]);
 
   useEffect(() => {
-    let ignore = false;
+  if (!isReady) return;
+  let ignore = false;
 
-    async function checkQuiz() {
-      const quiz = await getQuizForLesson(lesson.id);
+  async function checkQuiz() {
+    console.log("CHECKING QUIZ — isOnline:", isOnline, "lessonId:", lesson.id);
+    try {
+      const quiz = isOnline
+        ? await getQuizForLesson(lesson.id)
+        : await getOfflineQuizForLesson(lesson.id);
+      console.log("QUIZ RESULT:", JSON.stringify(quiz));
       if (!ignore) setHasQuiz(!!quiz);
+    } catch (err) {
+      console.error("QUIZ CHECK ERROR:", err);
     }
+  }
 
-    checkQuiz();
+  checkQuiz();
 
-    return () => {
-      ignore = true;
-    };
-  }, [lesson.id]);
+  return () => {
+    ignore = true;
+  };
+}, [lesson.id, isOnline, isReady]);
 
   async function handleMarkComplete() {
     setIsCompleting(true);

@@ -3,8 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const apiClient = create({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
+  timeout: 5000,
 });
-
 
 apiClient.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("token");

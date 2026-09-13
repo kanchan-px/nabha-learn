@@ -9,13 +9,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { RouteProp } from "@react-navigation/native";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 import { getCourseById } from "../api/courses.api";
 import type { Course } from "../api/courses.api";
-
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { downloadCourse, isCourseDownloaded } from "../db/download";
+import { useIsOnline } from "../hooks/useIsOnline";
+import { getOfflineCourseById } from "../db/offlineCourses";
 
 type CourseDetailRouteProp = RouteProp<RootStackParamList, "CourseDetail">;
 type CourseDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, "CourseDetail">;
@@ -28,15 +29,29 @@ export default function CourseDetailScreen() {
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshIndex, setRefreshIndex] = useState(0);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
+  const { isOnline, isReady } = useIsOnline();
+
+  // 1. Fetch course (online or offline depending on connectivity)
   useEffect(() => {
+    if (!courseId || !isReady) return;
     let ignore = false;
 
     async function fetchCourse() {
+      setIsLoading(true);
+
       try {
-        const data = await getCourseById(courseId);
+        const data = isOnline
+          ? await getCourseById(courseId)
+          : await getOfflineCourseById(courseId);
+
         if (!ignore) setCourse(data);
-      } catch {
+      } catch (err) {
+        console.error("COURSE DETAIL LOAD ERROR:", err);
         if (!ignore) setError("Failed to load course");
       } finally {
         if (!ignore) setIsLoading(false);
@@ -48,7 +63,45 @@ export default function CourseDetailScreen() {
     return () => {
       ignore = true;
     };
+  }, [courseId, refreshIndex, isOnline, isReady]);
+
+  // 2. Check offline download status
+  useEffect(() => {
+    let ignore = false;
+
+    async function checkDownloaded() {
+      try {
+        const downloaded = await isCourseDownloaded(courseId);
+        if (!ignore) setIsDownloaded(downloaded);
+      } catch {
+        if (!ignore) setIsDownloaded(false);
+      }
+    }
+
+    checkDownloaded();
+
+    return () => {
+      ignore = true;
+    };
   }, [courseId]);
+
+  function refresh() {
+    setRefreshIndex((i) => i + 1);
+  }
+
+  async function handleDownload() {
+    setDownloadError("");
+    setIsDownloading(true);
+
+    try {
+      await downloadCourse(courseId);
+      setIsDownloaded(true);
+    } catch {
+      setDownloadError("Download failed. Check your connection and try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -66,13 +119,31 @@ export default function CourseDetailScreen() {
     );
   }
 
-  const allLessons = (course.modules ?? []).flatMap((module) =>
-    module.lessons.map((lesson) => ({ ...lesson, moduleTitle: module.title }))
-  );
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
       {course.description ? <Text style={styles.description}>{course.description}</Text> : null}
+
+      {isOnline && isReady && (
+        <View style={styles.downloadRow}>
+          <TouchableOpacity
+            style={[styles.downloadButton, isDownloaded && styles.downloadButtonDone]}
+            onPress={handleDownload}
+            disabled={isDownloading || isDownloaded}
+          >
+            {isDownloading ? (
+              <ActivityIndicator color={isDownloaded ? "#059669" : "#FFFFFF"} />
+            ) : (
+              <Text
+                style={[styles.downloadButtonText, isDownloaded && styles.downloadButtonTextDone]}
+              >
+                {isDownloaded ? "Downloaded for Offline ✓" : "Download for Offline"}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {downloadError ? <Text style={styles.errorText}>{downloadError}</Text> : null}
+        </View>
+      )}
 
       <FlatList
         data={course.modules ?? []}
@@ -81,6 +152,7 @@ export default function CourseDetailScreen() {
         renderItem={({ item: module }) => (
           <View style={styles.moduleBlock}>
             <Text style={styles.moduleTitle}>{module.title}</Text>
+
             {module.lessons.map((lesson) => (
               <TouchableOpacity
                 key={lesson.id}
@@ -179,5 +251,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#374151",
     flex: 1,
+  },
+  downloadRow: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  downloadButton: {
+    backgroundColor: "#0F766E",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  downloadButtonDone: {
+    backgroundColor: "#D1FAE5",
+  },
+  downloadButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+  downloadButtonTextDone: {
+    color: "#059669",
   },
 });

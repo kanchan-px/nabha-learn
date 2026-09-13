@@ -1,71 +1,114 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { RouteProp } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 import { getQuizForLesson, submitQuizAttempt } from "../api/quiz.api";
 import type { Quiz, QuizAttemptResult } from "../api/quiz.api";
+import { getOfflineQuizForLesson } from "../db/offlineCourses";
+import { saveOfflineQuizAttempt } from "../db/offlineQuizAttempts";
 
 type QuizScreenRouteProp = RouteProp<RootStackParamList, "QuizScreen">;
 
 export default function QuizScreen() {
   const route = useRoute<QuizScreenRouteProp>();
   const { lessonId } = route.params;
+  console.log("QUIZ SCREEN — lessonId:", lessonId);
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [quiz, setQuiz] = useState<
+    Quiz | Awaited<ReturnType<typeof getOfflineQuizForLesson>>
+  >(null);
+  const [selectedAnswers, setSelectedAnswers] = useState<
+    Record<string, string>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<QuizAttemptResult | null>(null);
   const [error, setError] = useState("");
+  
 
   useEffect(() => {
-    let ignore = false;
+  let ignore = false;
 
-    async function loadQuiz() {
-      const data = await getQuizForLesson(lessonId);
-      if (!ignore) {
-        setQuiz(data);
-        setIsLoading(false);
-      }
+  async function loadQuiz() {
+  try {
+    const data = await getQuizForLesson(lessonId);
+    console.log("ONLINE QUIZ FETCH SUCCEEDED:", JSON.stringify(data));
+    if (!ignore) {
+      setQuiz(data);
+      setIsLoading(false);
     }
+  } catch (err) {
+    console.log("ONLINE QUIZ FETCH FAILED, trying offline. Error:", err);
+    const offlineData = await getOfflineQuizForLesson(lessonId);
+    console.log("OFFLINE QUIZ RESULT:", JSON.stringify(offlineData));
+    if (!ignore) {
+      setQuiz(offlineData);
+      setIsLoading(false);
+    }
+  }
+}
 
-    loadQuiz();
+  loadQuiz();
 
-    return () => {
-      ignore = true;
-    };
-  }, [lessonId]);
+  return () => {
+    ignore = true;
+  };
+}, [lessonId]);
 
   function selectOption(questionId: string, optionId: string) {
-    setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+    setSelectedAnswers((prev) => ({
+      ...prev,
+      [questionId]: optionId,
+    }));
   }
 
   async function handleSubmit() {
-    if (!quiz) return;
+  if (!quiz) return;
 
-    const answers = quiz.questions.map((q) => ({
-      questionId: q.id,
-      selectedOptionId: selectedAnswers[q.id],
-    }));
+  const answers = quiz.questions.map((q) => ({
+    questionId: q.id,
+    selectedOptionId: selectedAnswers[q.id],
+  }));
 
-    if (answers.some((a) => !a.selectedOptionId)) {
-      setError("Please answer every question before submitting.");
-      return;
-    }
-
-    setError("");
-    setIsSubmitting(true);
-    try {
-      const attemptResult = await submitQuizAttempt(lessonId, answers);
-      setResult(attemptResult);
-    } catch {
-      setError("Failed to submit quiz. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  if (answers.some((a) => !a.selectedOptionId)) {
+    setError("Please answer every question before submitting.");
+    return;
   }
+
+  setError("");
+  setIsSubmitting(true);
+
+  try {
+    const attemptResult = await submitQuizAttempt(lessonId, answers);
+    setResult(attemptResult);
+  } catch {
+    let score = 0;
+    for (const question of quiz.questions) {
+      const correctOption = question.options.find((o) => o.isCorrect);
+      if (correctOption && selectedAnswers[question.id] === correctOption.id) {
+        score += 1;
+      }
+    }
+    const totalMarks = quiz.questions.length;
+    try {
+      await saveOfflineQuizAttempt(lessonId, score, totalMarks);
+      setResult({ score, totalMarks });
+    } catch {
+      setError("Failed to save quiz attempt.");
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+}
 
   function handleRetake() {
     setSelectedAnswers({});
@@ -90,17 +133,24 @@ export default function QuizScreen() {
 
   if (result) {
     const passed = result.score / result.totalMarks >= 0.5;
+
     return (
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
         <View style={styles.centerContent}>
           <Text style={styles.resultEmoji}>{passed ? "🎉" : "📘"}</Text>
+
           <Text style={styles.resultScore}>
             {result.score} / {result.totalMarks}
           </Text>
+
           <Text style={styles.resultLabel}>
             {passed ? "Well done!" : "Keep practicing — you can try again."}
           </Text>
-          <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
+
+          <TouchableOpacity
+            style={styles.retakeButton}
+            onPress={handleRetake}
+          >
             <Text style={styles.retakeButtonText}>Retake Quiz</Text>
           </TouchableOpacity>
         </View>
@@ -118,16 +168,28 @@ export default function QuizScreen() {
             <Text style={styles.questionText}>
               {index + 1}. {question.text}
             </Text>
+
             {question.options.map((option) => {
-              const isSelected = selectedAnswers[question.id] === option.id;
+              const isSelected =
+                selectedAnswers[question.id] === option.id;
+
               return (
                 <TouchableOpacity
                   key={option.id}
-                  style={[styles.optionRow, isSelected && styles.optionRowSelected]}
+                  style={[
+                    styles.optionRow,
+                    isSelected && styles.optionRowSelected,
+                  ]}
                   onPress={() => selectOption(question.id, option.id)}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.radio, isSelected && styles.radioSelected]} />
+                  <View
+                    style={[
+                      styles.radio,
+                      isSelected && styles.radioSelected,
+                    ]}
+                  />
+
                   <Text style={styles.optionText}>{option.text}</Text>
                 </TouchableOpacity>
               );
@@ -154,18 +216,43 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F5F7FA" },
-  centerContent: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  content: { padding: 20 },
-  errorText: { color: "#DC2626", fontSize: 15, textAlign: "center", marginBottom: 12 },
-  quizTitle: { fontSize: 20, fontWeight: "700", color: "#111827", marginBottom: 16 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F5F7FA",
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  content: {
+    padding: 20,
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 15,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  quizTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 16,
+  },
   questionBlock: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
   },
-  questionText: { fontSize: 16, fontWeight: "600", color: "#111827", marginBottom: 12 },
+  questionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 12,
+  },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -191,7 +278,11 @@ const styles = StyleSheet.create({
     borderColor: "#0F766E",
     backgroundColor: "#0F766E",
   },
-  optionText: { fontSize: 15, color: "#374151", flex: 1 },
+  optionText: {
+    fontSize: 15,
+    color: "#374151",
+    flex: 1,
+  },
   submitButton: {
     backgroundColor: "#0F766E",
     borderRadius: 10,
@@ -199,15 +290,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 8,
   },
-  submitButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  resultEmoji: { fontSize: 48, marginBottom: 12 },
-  resultScore: { fontSize: 32, fontWeight: "700", color: "#111827" },
-  resultLabel: { fontSize: 15, color: "#6B7280", marginTop: 8, marginBottom: 24 },
+  submitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  resultEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  resultScore: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  resultLabel: {
+    fontSize: 15,
+    color: "#6B7280",
+    marginTop: 8,
+    marginBottom: 24,
+  },
   retakeButton: {
     backgroundColor: "#0F766E",
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
-  retakeButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
+  retakeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });

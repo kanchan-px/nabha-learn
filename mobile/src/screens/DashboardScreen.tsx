@@ -15,7 +15,13 @@ import { useAuth } from "../context/useAuth";
 import { getCourses } from "../api/courses.api";
 import type { Course } from "../api/courses.api";
 
-type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, "Dashboard">;
+import { useIsOnline } from "../hooks/useIsOnline";
+import { getOfflineCourses } from "../db/offlineCourses";
+
+type DashboardNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Dashboard"
+>;
 
 export default function DashboardScreen() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -24,55 +30,84 @@ export default function DashboardScreen() {
 
   const { user, logout } = useAuth();
   const navigation = useNavigation<DashboardNavigationProp>();
+  const { isOnline, isReady } = useIsOnline();
+  console.log("IS ONLINE:", isOnline);
 
   useEffect(() => {
-    let ignore = false;
+  if (!isReady) return;
+  let ignore = false;
 
-    async function fetchCourses() {
-      try {
-        const data = await getCourses();
-        if (!ignore) setCourses(data);
-      } catch {
-        if (!ignore) setError("Failed to load courses");
-      } finally {
-        if (!ignore) setIsLoading(false);
-      }
+  async function fetchCourses() {
+    try {
+      const data = isOnline ? await getCourses() : await getOfflineCourses();
+      if (!ignore) setCourses(data);
+    } catch {
+      if (!ignore) setError("Failed to load courses");
+    } finally {
+      if (!ignore) setIsLoading(false);
     }
+  }
 
-    fetchCourses();
+  fetchCourses();
 
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  return () => {
+    ignore = true;
+  };
+}, [isOnline, isReady]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>
+            You&apos;re offline — showing downloaded courses
+          </Text>
+        </View>
+      )}
+
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, {user?.name}</Text>
-          <Text style={styles.subGreeting}>Continue your learning</Text>
+          <Text style={styles.greeting}>
+            Hello, {user?.name}
+          </Text>
+
+          <Text style={styles.subGreeting}>
+            Continue your learning
+          </Text>
         </View>
-        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Log Out</Text>
+
+        <TouchableOpacity
+          onPress={logout}
+          style={styles.logoutButton}
+        >
+          <Text style={styles.logoutText}>
+            Log Out
+          </Text>
         </TouchableOpacity>
       </View>
 
       {isLoading && (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#0F766E" />
+          <ActivityIndicator
+            size="large"
+            color="#0F766E"
+          />
         </View>
       )}
 
       {!isLoading && error ? (
         <View style={styles.centerContent}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>
+            {error}
+          </Text>
         </View>
       ) : null}
 
       {!isLoading && !error && courses.length === 0 && (
         <View style={styles.centerContent}>
-          <Text style={styles.emptyText}>No courses available yet.</Text>
+          <Text style={styles.emptyText}>
+            No courses available yet.
+          </Text>
         </View>
       )}
 
@@ -92,14 +127,23 @@ export default function DashboardScreen() {
                 })
               }
             >
-              <Text style={styles.courseTitle}>{item.title}</Text>
+              <Text style={styles.courseTitle}>
+                {item.title}
+              </Text>
+
               {item.description ? (
-                <Text style={styles.courseDescription} numberOfLines={2}>
+                <Text
+                  style={styles.courseDescription}
+                  numberOfLines={2}
+                >
                   {item.description}
                 </Text>
               ) : null}
+
               {item.gradeLevel ? (
-                <Text style={styles.courseGrade}>Grade {item.gradeLevel}</Text>
+                <Text style={styles.courseGrade}>
+                  Grade {item.gradeLevel}
+                </Text>
               ) : null}
             </TouchableOpacity>
           )}
@@ -114,6 +158,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F7FA",
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -124,43 +169,52 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
   },
+
   greeting: {
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
   },
+
   subGreeting: {
     fontSize: 13,
     color: "#6B7280",
     marginTop: 2,
   },
+
   logoutButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: "#FEE2E2",
   },
+
   logoutText: {
     color: "#DC2626",
     fontWeight: "600",
     fontSize: 13,
   },
+
   centerContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+
   errorText: {
     color: "#DC2626",
     fontSize: 15,
   },
+
   emptyText: {
     color: "#6B7280",
     fontSize: 15,
   },
+
   listContent: {
     padding: 20,
   },
+
   courseCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
@@ -172,20 +226,37 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
+
   courseTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: "#111827",
   },
+
   courseDescription: {
     fontSize: 14,
     color: "#6B7280",
     marginTop: 6,
   },
+
   courseGrade: {
     fontSize: 12,
     color: "#0F766E",
     fontWeight: "600",
     marginTop: 10,
   },
+
+  offlineBanner: {
+    backgroundColor: "#FEF3C7",
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+  },
+
+  offlineBannerText: {
+    color: "#92400E",
+    fontSize: 13,
+    fontWeight: "500",
+    textAlign: "center",
+  },
 });
+
