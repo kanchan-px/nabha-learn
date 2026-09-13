@@ -17,8 +17,20 @@ export async function createCourse(data: CreateCourseInput, createdById: string)
 
 export async function listCourses(userId: string, userRole: string) {
   if (userRole === "STUDENT") {
+    const student = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { schoolId: true },
+    });
+
+    if (!student?.schoolId) {
+      return [];
+    }
+
     return prisma.course.findMany({
-      where: { isPublished: true },
+      where: {
+        isPublished: true,
+        createdBy: { schoolId: student.schoolId },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -73,6 +85,7 @@ export async function getCourseById(courseId: string, userId: string, userRole: 
           lessons: { orderBy: { order: "asc" } },
         },
       },
+      createdBy: { select: { schoolId: true } },
     },
   });
 
@@ -80,8 +93,19 @@ export async function getCourseById(courseId: string, userId: string, userRole: 
     throw new Error("Course not found");
   }
 
-  if (userRole === "STUDENT" && !course.isPublished) {
-    throw new Error("Course not found");
+  if (userRole === "STUDENT") {
+    if (!course.isPublished) {
+      throw new Error("Course not found");
+    }
+
+    const student = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { schoolId: true },
+    });
+
+    if (!student?.schoolId || student.schoolId !== course.createdBy.schoolId) {
+      throw new Error("Course not found");
+    }
   }
 
   if (userRole === "TEACHER") {
