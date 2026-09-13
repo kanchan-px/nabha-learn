@@ -112,3 +112,19 @@ export async function getQuizForDownload(lessonId: string) {
 
   return quiz;
 }
+
+export async function recordOfflineAttempt(
+  lessonId: string,
+  studentId: string,
+  score: number,
+  totalMarks: number
+) {
+  const quiz = await prisma.quiz.findUnique({ where: { lessonId } });
+  if (!quiz) {
+    throw new Error("Quiz not found for this lesson");
+  }
+
+  return prisma.quizAttempt.create({
+    data: { quizId: quiz.id, studentId, score, totalMarks },
+  });
+}

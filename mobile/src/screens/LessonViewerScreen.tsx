@@ -22,6 +22,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { getQuizForLesson } from "../api/quiz.api";
 import { useIsOnline } from "../hooks/useIsOnline";
 import { getOfflineQuizForLesson } from "../db/offlineCourses";
+import { saveOfflineProgressEvent, getOfflineLessonStatus } from "../db/offlineProgress";
+import axios from "axios";
 
 type LessonViewerRouteProp = RouteProp<RootStackParamList, "LessonViewer">;
 type LessonViewerNavigationProp = NativeStackNavigationProp<RootStackParamList, "LessonViewer">;
@@ -51,12 +53,23 @@ export default function LessonViewerScreen() {
           setIsCompleted(true);
         }
       } catch {
-        // ignore — non-critical
+        const offlineStatus = await getOfflineLessonStatus(lesson.id);
+        if (!ignore && offlineStatus === "LESSON_COMPLETED") {
+          setIsCompleted(true);
+        }
+      }
+    }
+
+    async function logOpened() {
+      try {
+        await logProgress(lesson.id, "LESSON_OPENED");
+      } catch {
+        await saveOfflineProgressEvent(lesson.id, "LESSON_OPENED");
       }
     }
 
     checkStatus();
-    logProgress(lesson.id, "LESSON_OPENED").catch(() => {});
+    logOpened();
 
     return () => {
       ignore = true;
@@ -64,33 +77,44 @@ export default function LessonViewerScreen() {
   }, [lesson.id]);
 
   useEffect(() => {
-  if (!isReady) return;
-  let ignore = false;
+    if (!isReady) return;
+    let ignore = false;
 
-  async function checkQuiz() {
-    console.log("CHECKING QUIZ — isOnline:", isOnline, "lessonId:", lesson.id);
-    try {
-      const quiz = isOnline
-        ? await getQuizForLesson(lesson.id)
-        : await getOfflineQuizForLesson(lesson.id);
-      console.log("QUIZ RESULT:", JSON.stringify(quiz));
-      if (!ignore) setHasQuiz(!!quiz);
-    } catch (err) {
-      console.error("QUIZ CHECK ERROR:", err);
+    async function checkQuiz() {
+      console.log("CHECKING QUIZ — isOnline:", isOnline, "lessonId:", lesson.id);
+      try {
+        const quiz = isOnline
+          ? await getQuizForLesson(lesson.id)
+          : await getOfflineQuizForLesson(lesson.id);
+        console.log("QUIZ RESULT:", JSON.stringify(quiz));
+        if (!ignore) setHasQuiz(!!quiz);
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+          if (!ignore) {
+            setHasQuiz(false);
+          }
+          return;
+        }
+
+        console.error("QUIZ CHECK ERROR:", err);
+      }
     }
-  }
 
-  checkQuiz();
+    checkQuiz();
 
-  return () => {
-    ignore = true;
-  };
-}, [lesson.id, isOnline, isReady]);
+    return () => {
+      ignore = true;
+    };
+  }, [lesson.id, isOnline, isReady]);
 
   async function handleMarkComplete() {
     setIsCompleting(true);
     try {
-      await logProgress(lesson.id, "LESSON_COMPLETED");
+      try {
+        await logProgress(lesson.id, "LESSON_COMPLETED");
+      } catch {
+        await saveOfflineProgressEvent(lesson.id, "LESSON_COMPLETED");
+      }
       setIsCompleted(true);
     } finally {
       setIsCompleting(false);

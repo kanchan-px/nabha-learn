@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../../middleware/authenticate";
 import { createQuizSchema, submitAttemptSchema } from "./quiz.validation";
 import { createQuiz, getQuizForStudent, submitAttempt, getQuizForDownload } from "./quiz.service";
+import { recordOfflineAttempt } from "./quiz.service";
 
 export async function create(req: AuthenticatedRequest, res: Response) {
   const lessonId = req.params.lessonId as string;
@@ -53,4 +54,17 @@ export async function getForDownload(req: AuthenticatedRequest, res: Response) {
   const lessonId = req.params.lessonId as string;
   const quiz = await getQuizForDownload(lessonId);
   return res.status(200).json({ quiz });
+}
+
+export async function submitOfflineResult(req: AuthenticatedRequest, res: Response) {
+  const lessonId = req.params.lessonId as string;
+  const { score, totalMarks } = req.body;
+
+  try {
+    const attempt = await recordOfflineAttempt(lessonId, req.user!.userId, score, totalMarks);
+    return res.status(201).json({ attempt });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Something went wrong";
+    return res.status(400).json({ error: message });
+  }
 }

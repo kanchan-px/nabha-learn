@@ -52,13 +52,17 @@ export async function getCourseProgress(courseId: string) {
 
   const progressGrid = students.map((student) => {
     const lessonStatuses = lessonIds.map((lessonId) => {
-      const latestEvent = allEvents.find(
+      const studentLessonEvents = allEvents.filter(
         (e) => e.studentId === student.id && e.lessonId === lessonId
       );
 
+      const hasCompleted = studentLessonEvents.some((e) => e.eventType === "LESSON_COMPLETED");
+
+      const hasOpened = studentLessonEvents.some((e) => e.eventType === "LESSON_OPENED");
+
       return {
         lessonId,
-        status: latestEvent ? latestEvent.eventType : "NOT_STARTED",
+        status: hasCompleted ? "LESSON_COMPLETED" : hasOpened ? "LESSON_OPENED" : "NOT_STARTED",
       };
     });
 
@@ -76,10 +80,29 @@ export async function getCourseProgress(courseId: string) {
 }
 
 export async function getLessonStatus(lessonId: string, studentId: string) {
-  const latestEvent = await prisma.progressEvent.findFirst({
-    where: { lessonId, studentId },
+  const completedEvent = await prisma.progressEvent.findFirst({
+    where: {
+      lessonId,
+      studentId,
+      eventType: "LESSON_COMPLETED",
+    },
     orderBy: { createdAt: "desc" },
   });
 
-  return { status: latestEvent ? latestEvent.eventType : "NOT_STARTED" };
+  if (completedEvent) {
+    return { status: "LESSON_COMPLETED" };
+  }
+
+  const openedEvent = await prisma.progressEvent.findFirst({
+    where: {
+      lessonId,
+      studentId,
+      eventType: "LESSON_OPENED",
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    status: openedEvent ? "LESSON_OPENED" : "NOT_STARTED",
+  };
 }
