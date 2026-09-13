@@ -41,6 +41,10 @@ export async function loginUser(data: LoginInput) {
     throw new Error("Invalid username or password");
   }
 
+  if (!user.isActive) {
+    throw new Error("This account has been disabled");
+  }
+
   const isPasswordValid = await comparePassword(data.password, user.passwordHash);
 
   if (!isPasswordValid) {

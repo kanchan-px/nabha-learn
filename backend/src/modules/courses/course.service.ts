@@ -23,9 +23,34 @@ export async function listCourses(userRole: string) {
     });
   }
 
-  return prisma.course.findMany({
+  const courses = await prisma.course.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      modules: {
+        select: {
+          _count: {
+            select: {
+              lessons: true,
+            },
+          },
+        },
+      },
+    },
   });
+
+  return courses.map((course) => ({
+    id: course.id,
+    title: course.title,
+    description: course.description,
+    gradeLevel: course.gradeLevel,
+    language: course.language,
+    isPublished: course.isPublished,
+    createdAt: course.createdAt,
+    updatedAt: course.updatedAt,
+    createdById: course.createdById,
+    moduleCount: course.modules.length,
+    lessonCount: course.modules.reduce((total, module) => total + module._count.lessons, 0),
+  }));
 }
 
 export async function getCourseById(courseId: string, userRole: string) {

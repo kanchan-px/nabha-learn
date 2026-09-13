@@ -24,6 +24,10 @@ export interface Course {
   language: string;
   isPublished: boolean;
   createdAt: string;
+  updatedAt?: string;
+  createdById?: string;
+  moduleCount?: number;
+  lessonCount?: number;
   modules?: Module[];
 }
 
