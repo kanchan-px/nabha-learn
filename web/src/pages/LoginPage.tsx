@@ -18,8 +18,8 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login({ username, password });
-      navigate("/dashboard");
+      const loggedInUser = await login({ username, password });
+      navigate(loggedInUser.role === "ADMIN" ? "/admin/schools" : "/dashboard");
     } catch {
       setError("Invalid username or password");
     } finally {

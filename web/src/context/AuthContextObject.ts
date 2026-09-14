@@ -3,7 +3,7 @@ import type { AuthUser, LoginPayload } from "../api/auth.api";
 
 export interface AuthContextType {
   user: AuthUser | null;
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => void;
 }
 
