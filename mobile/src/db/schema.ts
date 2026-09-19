@@ -14,58 +14,81 @@ export async function initDatabase() {
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
 
-    CREATE TABLE IF NOT EXISTS downloaded_courses (
-      id TEXT PRIMARY KEY,
+    DROP TABLE IF EXISTS downloaded_courses;
+    DROP TABLE IF EXISTS downloaded_modules;
+    DROP TABLE IF EXISTS downloaded_lessons;
+    DROP TABLE IF EXISTS downloaded_quizzes;
+    DROP TABLE IF EXISTS downloaded_questions;
+    DROP TABLE IF EXISTS downloaded_options;
+    DROP TABLE IF EXISTS pending_progress_events;
+    DROP TABLE IF EXISTS pending_quiz_attempts;
+
+    CREATE TABLE downloaded_courses (
+      id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
       title TEXT NOT NULL,
       description TEXT,
-      downloaded_at TEXT NOT NULL
+      downloaded_at TEXT NOT NULL,
+      PRIMARY KEY (id, student_id)
     );
 
-    CREATE TABLE IF NOT EXISTS downloaded_modules (
-      id TEXT PRIMARY KEY,
+    CREATE TABLE downloaded_modules (
+      id TEXT NOT NULL,
       course_id TEXT NOT NULL,
-      title TEXT NOT NULL,
-      order_index INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS downloaded_lessons (
-      id TEXT PRIMARY KEY,
-      module_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
       title TEXT NOT NULL,
       order_index INTEGER NOT NULL,
-      body_text TEXT
+      PRIMARY KEY (id, student_id)
     );
 
-    CREATE TABLE IF NOT EXISTS downloaded_quizzes (
-      id TEXT PRIMARY KEY,
-      lesson_id TEXT NOT NULL UNIQUE,
-      title TEXT NOT NULL
+    CREATE TABLE downloaded_lessons (
+      id TEXT NOT NULL,
+      module_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      order_index INTEGER NOT NULL,
+      body_text TEXT,
+      PRIMARY KEY (id, student_id)
     );
 
-    CREATE TABLE IF NOT EXISTS downloaded_questions (
-      id TEXT PRIMARY KEY,
+    CREATE TABLE downloaded_quizzes (
+      id TEXT NOT NULL,
+      lesson_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      PRIMARY KEY (id, student_id)
+    );
+
+    CREATE TABLE downloaded_questions (
+      id TEXT NOT NULL,
       quiz_id TEXT NOT NULL,
-      text TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS downloaded_options (
-      id TEXT PRIMARY KEY,
-      question_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
       text TEXT NOT NULL,
-      is_correct INTEGER NOT NULL
+      PRIMARY KEY (id, student_id)
     );
 
-    CREATE TABLE IF NOT EXISTS pending_progress_events (
+    CREATE TABLE downloaded_options (
+      id TEXT NOT NULL,
+      question_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      is_correct INTEGER NOT NULL,
+      PRIMARY KEY (id, student_id)
+    );
+
+    CREATE TABLE pending_progress_events (
       id TEXT PRIMARY KEY,
       lesson_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
       event_type TEXT NOT NULL,
       created_at TEXT NOT NULL,
       synced INTEGER NOT NULL DEFAULT 0
     );
 
-    CREATE TABLE IF NOT EXISTS pending_quiz_attempts (
+    CREATE TABLE pending_quiz_attempts (
       id TEXT PRIMARY KEY,
       lesson_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
       score INTEGER NOT NULL,
       total_marks INTEGER NOT NULL,
       created_at TEXT NOT NULL,

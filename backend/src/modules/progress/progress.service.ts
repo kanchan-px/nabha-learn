@@ -23,12 +23,11 @@ export async function getCourseProgress(courseId: string) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     include: {
+      createdBy: { select: { schoolId: true } },
       modules: {
         orderBy: { order: "asc" },
         include: {
-          lessons: {
-            orderBy: { order: "asc" },
-          },
+          lessons: { orderBy: { order: "asc" } },
         },
       },
     },
@@ -38,26 +37,33 @@ export async function getCourseProgress(courseId: string) {
     throw new Error("Course not found");
   }
 
+  const courseSchoolId = course.createdBy.schoolId;
+
   const lessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
 
   const students = await prisma.user.findMany({
-    where: { role: "STUDENT" },
+    where: {
+      role: "STUDENT",
+      schoolId: courseSchoolId ?? undefined,
+    },
     select: { id: true, name: true, username: true },
   });
+
+  // If the course has no assigned school, show no students rather than everyone
+  const scopedStudents = courseSchoolId ? students : [];
 
   const allEvents = await prisma.progressEvent.findMany({
     where: { lessonId: { in: lessonIds } },
     orderBy: { createdAt: "desc" },
   });
 
-  const progressGrid = students.map((student) => {
+  const progressGrid = scopedStudents.map((student) => {
     const lessonStatuses = lessonIds.map((lessonId) => {
       const studentLessonEvents = allEvents.filter(
         (e) => e.studentId === student.id && e.lessonId === lessonId
       );
 
       const hasCompleted = studentLessonEvents.some((e) => e.eventType === "LESSON_COMPLETED");
-
       const hasOpened = studentLessonEvents.some((e) => e.eventType === "LESSON_OPENED");
 
       return {
@@ -66,10 +72,7 @@ export async function getCourseProgress(courseId: string) {
       };
     });
 
-    return {
-      student,
-      lessonStatuses,
-    };
+    return { student, lessonStatuses };
   });
 
   return {

@@ -1,5 +1,6 @@
 import { getDb } from "./schema";
 import apiClient from "../api/client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface PendingProgressRow {
   id: string;
@@ -14,13 +15,20 @@ interface PendingQuizAttemptRow {
   total_marks: number;
 }
 
+async function getCurrentStudentId(): Promise<string> {
+  const savedUser = await AsyncStorage.getItem("user");
+  if (!savedUser) throw new Error("No logged-in user found");
+  return JSON.parse(savedUser).id;
+}
+
 export async function syncPendingData(): Promise<{ synced: number; failed: number }> {
   const db = await getDb();
   let synced = 0;
   let failed = 0;
 
   const pendingProgress = await db.getAllAsync<PendingProgressRow>(
-    `SELECT id, lesson_id, event_type FROM pending_progress_events WHERE synced = 0`
+    `SELECT id, lesson_id, event_type FROM pending_progress_events WHERE synced = 0 AND student_id = ?`,
+    [await getCurrentStudentId()]
   );
 
   for (const row of pendingProgress) {
@@ -36,7 +44,8 @@ export async function syncPendingData(): Promise<{ synced: number; failed: numbe
   }
 
   const pendingAttempts = await db.getAllAsync<PendingQuizAttemptRow>(
-    `SELECT id, lesson_id, score, total_marks FROM pending_quiz_attempts WHERE synced = 0`
+    `SELECT id, lesson_id, score, total_marks FROM pending_quiz_attempts WHERE synced = 0 AND student_id = ?`,
+    [await getCurrentStudentId()]
   );
 
   for (const row of pendingAttempts) {

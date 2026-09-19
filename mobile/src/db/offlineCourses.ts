@@ -1,13 +1,20 @@
 import { getDb } from "./schema";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Course, Module, Lesson } from "../api/courses.api";
 
+async function getCurrentStudentId(): Promise<string> {
+  const savedUser = await AsyncStorage.getItem("user");
+  if (!savedUser) throw new Error("No logged-in user found");
+  return JSON.parse(savedUser).id;
+}
+
 export async function getOfflineCourses(): Promise<Course[]> {
+  const studentId = await getCurrentStudentId();
   const db = await getDb();
-  const rows = await db.getAllAsync<{
-    id: string;
-    title: string;
-    description: string;
-  }>(`SELECT id, title, description FROM downloaded_courses`);
+  const rows = await db.getAllAsync<{ id: string; title: string; description: string }>(
+    `SELECT id, title, description FROM downloaded_courses WHERE student_id = ?`,
+    [studentId]
+  );
 
   return rows.map((row) => ({
     id: row.id,
@@ -21,33 +28,29 @@ export async function getOfflineCourses(): Promise<Course[]> {
 }
 
 export async function getOfflineCourseById(courseId: string): Promise<Course | null> {
+  const studentId = await getCurrentStudentId();
   const db = await getDb();
 
   const courseRow = await db.getFirstAsync<{ id: string; title: string; description: string }>(
-    `SELECT id, title, description FROM downloaded_courses WHERE id = ?`,
-    [courseId]
+    `SELECT id, title, description FROM downloaded_courses WHERE id = ? AND student_id = ?`,
+    [courseId, studentId]
   );
 
   if (!courseRow) return null;
 
   const moduleRows = await db.getAllAsync<{ id: string; title: string; order_index: number }>(
-    `SELECT id, title, order_index FROM downloaded_modules WHERE course_id = ? ORDER BY order_index ASC`,
-    [courseId]
+    `SELECT id, title, order_index FROM downloaded_modules WHERE course_id = ? AND student_id = ? ORDER BY order_index ASC`,
+    [courseId, studentId]
   );
-
-  console.log("MODULE ROWS:", JSON.stringify(moduleRows));
 
   const modules: Module[] = [];
 
   for (const moduleRow of moduleRows) {
     const lessonRows = await db.getAllAsync<{
-      id: string;
-      title: string;
-      order_index: number;
-      body_text: string;
+      id: string; title: string; order_index: number; body_text: string;
     }>(
-      `SELECT id, title, order_index, body_text FROM downloaded_lessons WHERE module_id = ? ORDER BY order_index ASC`,
-      [moduleRow.id]
+      `SELECT id, title, order_index, body_text FROM downloaded_lessons WHERE module_id = ? AND student_id = ? ORDER BY order_index ASC`,
+      [moduleRow.id, studentId]
     );
 
     const lessons: Lesson[] = lessonRows.map((l) => ({
@@ -59,12 +62,7 @@ export async function getOfflineCourseById(courseId: string): Promise<Course | n
       pdfUrl: null,
     }));
 
-    modules.push({
-      id: moduleRow.id,
-      title: moduleRow.title,
-      order: moduleRow.order_index,
-      lessons,
-    });
+    modules.push({ id: moduleRow.id, title: moduleRow.title, order: moduleRow.order_index, lessons });
   }
 
   return {
@@ -79,55 +77,38 @@ export async function getOfflineCourseById(courseId: string): Promise<Course | n
   };
 }
 
-export interface OfflineQuizOption {
-  id: string;
-  text: string;
-  isCorrect: boolean;
-}
-
-export interface OfflineQuizQuestion {
-  id: string;
-  text: string;
-  options: OfflineQuizOption[];
-}
-
-export interface OfflineQuiz {
-  id: string;
-  title: string;
-  questions: OfflineQuizQuestion[];
-}
+export interface OfflineQuizOption { id: string; text: string; isCorrect: boolean; }
+export interface OfflineQuizQuestion { id: string; text: string; options: OfflineQuizOption[]; }
+export interface OfflineQuiz { id: string; title: string; questions: OfflineQuizQuestion[]; }
 
 export async function getOfflineQuizForLesson(lessonId: string): Promise<OfflineQuiz | null> {
+  const studentId = await getCurrentStudentId();
   const db = await getDb();
 
   const quizRow = await db.getFirstAsync<{ id: string; title: string }>(
-    `SELECT id, title FROM downloaded_quizzes WHERE lesson_id = ?`,
-    [lessonId]
+    `SELECT id, title FROM downloaded_quizzes WHERE lesson_id = ? AND student_id = ?`,
+    [lessonId, studentId]
   );
 
   if (!quizRow) return null;
 
   const questionRows = await db.getAllAsync<{ id: string; text: string }>(
-    `SELECT id, text FROM downloaded_questions WHERE quiz_id = ?`,
-    [quizRow.id]
+    `SELECT id, text FROM downloaded_questions WHERE quiz_id = ? AND student_id = ?`,
+    [quizRow.id, studentId]
   );
 
   const questions: OfflineQuizQuestion[] = [];
 
   for (const q of questionRows) {
     const optionRows = await db.getAllAsync<{ id: string; text: string; is_correct: number }>(
-      `SELECT id, text, is_correct FROM downloaded_options WHERE question_id = ?`,
-      [q.id]
+      `SELECT id, text, is_correct FROM downloaded_options WHERE question_id = ? AND student_id = ?`,
+      [q.id, studentId]
     );
 
     questions.push({
       id: q.id,
       text: q.text,
-      options: optionRows.map((o) => ({
-        id: o.id,
-        text: o.text,
-        isCorrect: o.is_correct === 1,
-      })),
+      options: optionRows.map((o) => ({ id: o.id, text: o.text, isCorrect: o.is_correct === 1 })),
     });
   }
 
