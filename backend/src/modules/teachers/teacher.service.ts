@@ -35,6 +35,7 @@ export async function createTeacher(data: CreateTeacherInput) {
       passwordHash,
       role: "TEACHER",
       schoolId: data.schoolId,
+      gradeLevel: data.gradeLevel,
       isActive: true,
     },
   });
@@ -44,6 +45,7 @@ export async function createTeacher(data: CreateTeacherInput) {
     name: teacher.name,
     username: teacher.username,
     schoolId: teacher.schoolId,
+    gradeLevel: teacher.gradeLevel,
     isActive: teacher.isActive,
   };
 }
@@ -57,6 +59,7 @@ export async function listTeachers() {
       username: true,
       isActive: true,
       schoolId: true,
+      gradeLevel: true,
       school: { select: { name: true } },
       createdAt: true,
     },
@@ -82,6 +85,7 @@ export async function updateTeacher(teacherId: string, data: UpdateTeacherInput)
       username: true,
       isActive: true,
       schoolId: true,
+      gradeLevel: true,
     },
   });
 }
