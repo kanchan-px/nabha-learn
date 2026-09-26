@@ -6,6 +6,7 @@ export interface Teacher {
   username: string;
   isActive: boolean;
   schoolId: string | null;
+  gradeLevel: string | null;
   school: { name: string } | null;
   createdAt: string;
 }
@@ -14,6 +15,7 @@ export interface CreateTeacherPayload {
   name: string;
   password: string;
   schoolId: string;
+  gradeLevel: string;
   email?: string;
 }
 

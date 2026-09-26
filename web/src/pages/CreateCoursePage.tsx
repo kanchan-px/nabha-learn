@@ -8,7 +8,6 @@ import AppLayout from "../components/AppLayout";
 function CreateCoursePage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [gradeLevel, setGradeLevel] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -24,7 +23,7 @@ function CreateCoursePage() {
       const course = await createCourse({
         title: title.trim(),
         description: description.trim() || undefined,
-        gradeLevel: gradeLevel.trim() || undefined,
+        // gradeLevel: gradeLevel.trim() || undefined,
       });
 
       navigate(`/courses/${course.id}`);
@@ -120,15 +119,6 @@ function CreateCoursePage() {
               <p className="mt-1 text-xs text-slate-500">
                 Specify the intended class or grade for this course.
               </p>
-
-              <input
-                id="gradeLevel"
-                type="text"
-                value={gradeLevel}
-                onChange={(e) => setGradeLevel(e.target.value)}
-                placeholder="e.g. Grade 6"
-                className="mt-3 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-              />
             </div>
           </div>
 

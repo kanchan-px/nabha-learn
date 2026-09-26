@@ -52,6 +52,19 @@ function AppLayout({ children }: { children: ReactNode }) {
               >
                 Courses
               </Link>
+
+              {user?.role === "TEACHER" && (
+                <Link
+                  to="/students"
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    location.pathname === "/students"
+                      ? "bg-teal-50 text-teal-700"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  Students
+                </Link>
+              )}
             </nav>
           )}
 

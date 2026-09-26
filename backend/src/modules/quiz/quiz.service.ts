@@ -132,16 +132,19 @@ export async function getQuizForDownload(lessonId: string, userId: string, userR
 
     const student = await prisma.user.findUnique({
       where: { id: userId },
-      select: { schoolId: true },
+      select: { schoolId: true, gradeLevel: true },
     });
 
     const courseSchoolId = lesson.module.course.createdBy.schoolId;
+    const courseGradeLevel = lesson.module.course.gradeLevel;
     const isPublished = lesson.module.course.isPublished;
 
     if (
       !student?.schoolId ||
+      !student?.gradeLevel ||
       !courseSchoolId ||
       student.schoolId !== courseSchoolId ||
+      student.gradeLevel !== courseGradeLevel ||
       !isPublished
     ) {
       throw new Error("Not authorized to access this content");

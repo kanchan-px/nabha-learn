@@ -4,31 +4,64 @@ import { CreateCourseInput, UpdateCourseInput } from "./course.validation";
 const prisma = new PrismaClient();
 
 export async function createCourse(data: CreateCourseInput, createdById: string) {
+  const teacher = await prisma.user.findUnique({ where: { id: createdById } });
+
+  if (!teacher?.schoolId || !teacher?.gradeLevel) {
+    throw new Error("Teacher must have an assigned school and grade to create courses");
+  }
+
   return prisma.course.create({
     data: {
       title: data.title,
       description: data.description,
-      gradeLevel: data.gradeLevel,
+      gradeLevel: teacher.gradeLevel,
       language: data.language,
       createdById,
     },
   });
 }
 
+async function canAccessCourse(
+  courseId: string,
+  userId: string,
+  userRole: string
+): Promise<boolean> {
+  if (userRole === "ADMIN") return true;
+
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { gradeLevel: true, createdBy: { select: { schoolId: true } } },
+  });
+
+  if (!course) return false;
+
+  const requestingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { schoolId: true, gradeLevel: true },
+  });
+
+  if (!requestingUser?.schoolId || !course.createdBy.schoolId) return false;
+  if (requestingUser.schoolId !== course.createdBy.schoolId) return false;
+  if (requestingUser.gradeLevel !== course.gradeLevel) return false;
+
+  return true;
+}
+
 export async function listCourses(userId: string, userRole: string) {
   if (userRole === "STUDENT") {
     const student = await prisma.user.findUnique({
       where: { id: userId },
-      select: { schoolId: true },
+      select: { schoolId: true, gradeLevel: true },
     });
 
-    if (!student?.schoolId) {
+    if (!student?.schoolId || !student?.gradeLevel) {
       return [];
     }
 
     return prisma.course.findMany({
       where: {
         isPublished: true,
+        gradeLevel: student.gradeLevel,
         createdBy: { schoolId: student.schoolId },
       },
       orderBy: { createdAt: "desc" },
@@ -41,11 +74,16 @@ export async function listCourses(userId: string, userRole: string) {
 
   const requestingUser = await prisma.user.findUnique({
     where: { id: userId },
-    select: { schoolId: true },
+    select: { schoolId: true, gradeLevel: true },
   });
 
+  if (!requestingUser?.schoolId || !requestingUser?.gradeLevel) {
+    return [];
+  }
+
   return listCoursesWithCounts({
-    createdBy: { schoolId: requestingUser?.schoolId ?? undefined },
+    gradeLevel: requestingUser.gradeLevel,
+    createdBy: { schoolId: requestingUser.schoolId },
   });
 }
 
@@ -54,9 +92,7 @@ async function listCoursesWithCounts(where: object) {
     where,
     orderBy: { createdAt: "desc" },
     include: {
-      modules: {
-        select: { _count: { select: { lessons: true } } },
-      },
+      modules: { select: { _count: { select: { lessons: true } } } },
     },
   });
 
@@ -81,9 +117,7 @@ export async function getCourseById(courseId: string, userId: string, userRole: 
     include: {
       modules: {
         orderBy: { order: "asc" },
-        include: {
-          lessons: { orderBy: { order: "asc" } },
-        },
+        include: { lessons: { orderBy: { order: "asc" } } },
       },
       createdBy: { select: { schoolId: true } },
     },
@@ -100,10 +134,15 @@ export async function getCourseById(courseId: string, userId: string, userRole: 
 
     const student = await prisma.user.findUnique({
       where: { id: userId },
-      select: { schoolId: true },
+      select: { schoolId: true, gradeLevel: true },
     });
 
-    if (!student?.schoolId || student.schoolId !== course.createdBy.schoolId) {
+    if (
+      !student?.schoolId ||
+      !student?.gradeLevel ||
+      student.schoolId !== course.createdBy.schoolId ||
+      student.gradeLevel !== course.gradeLevel
+    ) {
       throw new Error("Course not found");
     }
   }
@@ -139,28 +178,4 @@ export async function updateCourse(
     where: { id: courseId },
     data,
   });
-}
-
-async function canAccessCourse(
-  courseId: string,
-  userId: string,
-  userRole: string
-): Promise<boolean> {
-  if (userRole === "ADMIN") return true;
-
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { createdBy: { select: { schoolId: true } } },
-  });
-
-  if (!course) return false;
-
-  const requestingUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { schoolId: true },
-  });
-
-  if (!requestingUser?.schoolId || !course.createdBy.schoolId) return false;
-
-  return requestingUser.schoolId === course.createdBy.schoolId;
 }

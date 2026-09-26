@@ -9,6 +9,7 @@ import progressRoutes from "./modules/progress/progress.routes";
 import courseProgressRoutes from "./modules/progress/courseProgress.routes";
 import schoolRoutes from "./modules/schools/school.routes";
 import teacherRoutes from "./modules/teachers/teacher.routes";
+import studentRoutes from "./modules/students/student.routes";
 
 const app = express();
 
@@ -28,5 +29,6 @@ app.use("/api/courses/:courseId/progress", courseProgressRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/schools", schoolRoutes);
 app.use("/api/teachers", teacherRoutes);
+app.use("/api/students", studentRoutes);
 
 export default app;

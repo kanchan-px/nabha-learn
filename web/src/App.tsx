@@ -7,6 +7,7 @@ import CourseDetailPage from "./pages/CourseDetailPage";
 import CourseProgressPage from "./pages/CourseProgressPage";
 import AdminSchoolsPage from "./pages/AdminSchoolsPage";
 import AdminTeachersPage from "./pages/AdminTeachersPage";
+import ManageStudentsPage from "./pages/ManageStudentsPage";
 
 function App() {
   return (
@@ -59,6 +60,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={["ADMIN"]}>
             <AdminTeachersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/students"
+        element={
+          <ProtectedRoute allowedRoles={["TEACHER"]}>
+            <ManageStudentsPage />
           </ProtectedRoute>
         }
       />
