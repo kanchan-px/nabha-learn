@@ -18,10 +18,8 @@ import type { Course } from "../api/courses.api";
 import { useIsOnline } from "../hooks/useIsOnline";
 import { getOfflineCourses } from "../db/offlineCourses";
 
-type DashboardNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "Dashboard"
->;
+
+type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, "Dashboard">;
 
 export default function DashboardScreen() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -34,26 +32,27 @@ export default function DashboardScreen() {
   console.log("IS ONLINE:", isOnline);
 
   useEffect(() => {
-  if (!isReady) return;
-  let ignore = false;
+    if (!isReady) return;
+    let ignore = false;
 
-  async function fetchCourses() {
-    try {
-      const data = isOnline ? await getCourses() : await getOfflineCourses();
-      if (!ignore) setCourses(data);
-    } catch {
-      if (!ignore) setError("Failed to load courses");
-    } finally {
-      if (!ignore) setIsLoading(false);
+    async function fetchCourses() {
+      try {
+        const data = isOnline ? await getCourses() : await getOfflineCourses();
+        if (!ignore) setCourses(data);
+      } catch {
+        if (!ignore) setError("Failed to load courses");
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
     }
-  }
 
-  fetchCourses();
+    fetchCourses();
 
-  return () => {
-    ignore = true;
-  };
-}, [isOnline, isReady]);
+    return () => {
+      ignore = true;
+    };
+  }, [isOnline, isReady]);
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -67,47 +66,31 @@ export default function DashboardScreen() {
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>
-            Hello, {user?.name}
-          </Text>
+          <Text style={styles.greeting}>Hello, {user?.name}</Text>
 
-          <Text style={styles.subGreeting}>
-            Continue your learning
-          </Text>
+          <Text style={styles.subGreeting}>Continue your learning</Text>
         </View>
 
-        <TouchableOpacity
-          onPress={logout}
-          style={styles.logoutButton}
-        >
-          <Text style={styles.logoutText}>
-            Log Out
-          </Text>
+        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+          <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </View>
 
       {isLoading && (
         <View style={styles.centerContent}>
-          <ActivityIndicator
-            size="large"
-            color="#0F766E"
-          />
+          <ActivityIndicator size="large" color="#0F766E" />
         </View>
       )}
 
       {!isLoading && error ? (
         <View style={styles.centerContent}>
-          <Text style={styles.errorText}>
-            {error}
-          </Text>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
 
       {!isLoading && !error && courses.length === 0 && (
         <View style={styles.centerContent}>
-          <Text style={styles.emptyText}>
-            No courses available yet.
-          </Text>
+          <Text style={styles.emptyText}>No courses available yet.</Text>
         </View>
       )}
 
@@ -127,23 +110,16 @@ export default function DashboardScreen() {
                 })
               }
             >
-              <Text style={styles.courseTitle}>
-                {item.title}
-              </Text>
+              <Text style={styles.courseTitle}>{item.title}</Text>
 
               {item.description ? (
-                <Text
-                  style={styles.courseDescription}
-                  numberOfLines={2}
-                >
+                <Text style={styles.courseDescription} numberOfLines={2}>
                   {item.description}
                 </Text>
               ) : null}
 
               {item.gradeLevel ? (
-                <Text style={styles.courseGrade}>
-                  Grade {item.gradeLevel}
-                </Text>
+                <Text style={styles.courseGrade}>Grade {item.gradeLevel}</Text>
               ) : null}
             </TouchableOpacity>
           )}
@@ -259,4 +235,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-

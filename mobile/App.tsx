@@ -5,14 +5,18 @@ import { AuthProvider } from "./src/context/AuthContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { initDatabase } from "./src/db/schema";
 import { syncPendingData } from "./src/db/sync";
+import { getMediaRecord } from "./src/db/offlineMedia";
 
 export default function App() {
   const [isDbReady, setIsDbReady] = useState(false);
 
   useEffect(() => {
     async function initializeDatabase() {
-      await initDatabase();
-      setIsDbReady(true);
+      try {
+        await initDatabase();
+      } catch (error) {
+        console.error("Database initialization failed:", error);
+      }
     }
 
     initializeDatabase();
@@ -21,7 +25,9 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (state.isConnected) {
-        syncPendingData().catch(() => {});
+        syncPendingData().catch((error) => {
+          console.error("Sync failed:", error);
+        });
       }
     });
 
